@@ -3,6 +3,7 @@
 #include <cassert>
 #include <iostream>
 #include <unordered_map>
+#include <set>
 
 struct Puzzle {
     Puzzle(int size = 9)
@@ -112,7 +113,6 @@ bool ParsePuzzle(std::istream& in, Puzzle& puzzle) {
     return true;
 }
 
-
 std::ostream& operator<<(std::ostream& os, const Puzzle& p) {
     int size = p.size;
     for (int r = 0; r < size; ++r) {
@@ -142,11 +142,110 @@ std::ostream& operator<<(std::ostream& os, const Puzzle& p) {
     return os;
 }
 
+struct Solver {
+    Solver(Puzzle& puzzle) : puzzle(puzzle) {}
+    Puzzle& puzzle;
+
+    bool SolveNaive() {
+        bool changed = false;
+
+        std::set<int> allNumbers;
+        for (int i = 1; i <= puzzle.size; ++i) {
+            allNumbers.insert(i);
+        }
+        std::vector<std::set<int>> possibles(puzzle.numbers.size(), allNumbers);
+
+        for (auto& g : puzzle.blockGraph) {
+            for (int i = 0; i < g.size(); ++i) {
+                int idx = g[i];
+                int number = puzzle.numbers[idx];
+                if (number == 0) {
+                    continue;
+                }
+                for (int j = 0; j < g.size(); ++j) {
+                    if (i == j) {
+                        continue;
+                    }
+                    int idx2 = g[j];
+                    int number2 = puzzle.numbers[idx2];
+                    if (number2 != 0) {
+                        continue;
+                    }
+                    possibles[idx2].erase(number);
+                }
+            }
+        }
+
+        // fill those that only appear once
+        for (int i = 0; i < puzzle.numbers.size(); ++i) {
+            // already filled out
+            if (puzzle.numbers[i] != 0) {
+                continue;
+            }
+
+            if (possibles[i].size() == 0) {
+                std::cerr << "Impossible to solve" << std::endl;
+                exit(1);
+                return false;
+            }
+
+            if (possibles[i].size() == 1) {
+                int number = *possibles[i].begin();
+                puzzle.numbers[i] = number;
+                std::cout << "Filled(method 1) out " << i << " with " << number << std::endl;
+                changed = true;
+            }
+        }
+
+        // fill those that have only a single place
+        for (auto& g : puzzle.blockGraph) {
+            std::unordered_map<int, int> occurences;
+            for (int i = 0; i < g.size(); ++i) {
+                int idx = g[i];
+                int number = puzzle.numbers[idx];
+                if (number != 0) {
+                    continue;
+                }
+                for (int pos : possibles[idx]) {
+                    occurences[pos]++;
+                }
+            }
+            for (auto [num, count] : occurences) {
+                if (count != 1) {
+                    continue;
+                }
+                for (int i = 0; i < g.size(); ++i) {
+                    int idx = g[i];
+                    int& number = puzzle.numbers[idx];
+                    if (number != 0) {
+                        continue;
+                    }
+                    if (possibles[idx].count(num)) {
+                        number = num;
+                        std::cout << "Filled(method 2) out " << i << " with " << number << std::endl;
+                        changed = true;
+                    }
+                }
+            }
+        }
+        return changed;
+    }
+
+    void Solve() {
+        while (SolveNaive()) {}
+    }
+};
+
 int main() {
     Puzzle p;
     if (!ParsePuzzle(std::cin, p)) {
         return 1;
     }
+
+    std::cout << p << std::endl;
+
+    Solver solver{p};
+    solver.Solve();
 
     std::cout << p << std::endl;
 }
