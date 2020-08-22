@@ -61,18 +61,77 @@ struct Puzzle {
     }
 
     void PrintNumbers(std::ostream& os = std::cout, int hr = -1, int hc = -1) const {
+        os << '+';
+        for (int c = 0; c < 4*size-1; ++c) {
+            os << '-';
+        }
+        os << "+\n";
+
         for (int r = 0; r < size; ++r) {
+            os << '|';
             for (int c = 0; c < size; ++c) {
+                int num = NumberAt(r, c);
+                os << ' ';
                 if (r == hr && c == hc) {
                     os << "\e[31m";
                 }
-                os << NumberAt(r, c) << ' ';
+                if (num == 0) {
+                    os << ' ';
+                } else {
+                    os << num;
+                }
                 if (r == hr && c == hc) {
                     os << "\e[0m";
                 }
+                os << ' ';
+                if (c != size - 1) {
+                    if (ShapeAt(r, c) != ShapeAt(r, c+1)) {
+                        os << '|';
+                    } else {
+                        os << ' ';
+                    }
+                }
             }
-            os << '\n';
+            os << "|\n";
+            if (r != size - 1) {
+                os << '|';
+                for (int cc = 0; cc < 4*size-1; ++cc) {
+                    int c = cc / 4;
+                    if (cc % 4 == 3) {
+                        bool above = ShapeAt(r, c) != ShapeAt(r, c+1);
+                        bool below = ShapeAt(r+1, c) != ShapeAt(r+1, c+1);
+                        bool left = ShapeAt(r, c) != ShapeAt(r+1, c);
+                        bool right = ShapeAt(r, c+1) != ShapeAt(r+1, c+1);
+
+                        bool horizontal = left || right;
+                        bool vertical = above || below;
+
+                        if (horizontal && vertical) {
+                            os << '+';
+                        } else if (horizontal) {
+                            os << '-';
+                        } else if (vertical) {
+                            os << '|';
+                        } else {
+                            os << ' ';
+                        }
+                    } else {
+                        if (ShapeAt(r, c) != ShapeAt(r+1, c)) {
+                            os << '-';
+                        } else {
+                            os << ' ';
+                        }
+                    }
+                }
+                os << "|\n";
+            }
         }
+
+        os << '+';
+        for (int c = 0; c < 4*size-1; ++c) {
+            os << '-';
+        }
+        os << "+\n";
     }
 
     void PrintShape(std::ostream& os = std::cout) const {
