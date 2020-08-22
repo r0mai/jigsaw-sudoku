@@ -238,6 +238,7 @@ struct Solver {
     Puzzle& puzzle;
 
     bool SolveNaive() {
+        std::cout << "------------- SolveNaive() -------------" << std::endl;
         bool changed = false;
 
         std::set<int> allNumbers;
@@ -322,12 +323,19 @@ struct Solver {
                         std::cout << "Filled(method 2) out " << Coord{idx} << " with " << number << std::endl;
 
                         puzzle.PrintNumbers1D(std::cout, idx);
-                        changed = true;
+
+                        if (Coord{idx}.row == 4 && Coord{idx}.col == 4) {
+                            std::cout << "This one" << std::endl;
+                            std::cout << "This one" << std::endl;
+                            std::cout << "This one" << std::endl;
+                            std::cout << "This one" << std::endl;
+                        }
+                        return true;
                     }
                 }
             }
         }
-        return changed;
+        return false;
     }
 
     void Solve() {
