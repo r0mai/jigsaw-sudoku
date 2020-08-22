@@ -53,6 +53,37 @@ struct Puzzle {
         }
     }
 
+    void PrintNumbers1D(std::ostream& os = std::cout, int idx = -1) const {
+        int row = idx / size;
+        int col = idx % size;
+
+        PrintNumbers(os, row, col);
+    }
+
+    void PrintNumbers(std::ostream& os = std::cout, int hr = -1, int hc = -1) const {
+        for (int r = 0; r < size; ++r) {
+            for (int c = 0; c < size; ++c) {
+                if (r == hr && c == hc) {
+                    os << "\e[31m";
+                }
+                os << NumberAt(r, c) << ' ';
+                if (r == hr && c == hc) {
+                    os << "\e[0m";
+                }
+            }
+            os << '\n';
+        }
+    }
+
+    void PrintShape(std::ostream& os = std::cout) const {
+        for (int r = 0; r < size; ++r) {
+            for (int c = 0; c < size; ++c) {
+                os << ShapeAt(r, c) << ' ';
+            }
+            os << '\n';
+        }
+    }
+
     int IndexOf(int r, int c) const {
         assert(r >= 0 && r < size);
         assert(c >= 0 && c < size);
@@ -75,6 +106,21 @@ struct Puzzle {
         return shape[IndexOf(r, c)];
     }
 };
+
+struct Coord {
+    Coord(int idx)
+        : row(idx / 9) // TODO hardcoded
+        , col(idx % 9) // TODO hardcoded
+    {}
+
+    int row = -1;
+    int col = -1;
+};
+
+std::ostream& operator<<(std::ostream& os, const Coord& c) {
+    os << '(' << c.row << ", " << c.col << ')';
+    return os;
+}
 
 bool ParsePuzzle(std::istream& in, Puzzle& puzzle) {
     int size;
@@ -114,23 +160,9 @@ bool ParsePuzzle(std::istream& in, Puzzle& puzzle) {
 }
 
 std::ostream& operator<<(std::ostream& os, const Puzzle& p) {
-    int size = p.size;
-    for (int r = 0; r < size; ++r) {
-        for (int c = 0; c < size; ++c) {
-            os << p.NumberAt(r, c) << ' ';
-        }
-        os << '\n';
-    }
-
+    p.PrintNumbers(os);
     os << '\n';
-
-    for (int r = 0; r < size; ++r) {
-        for (int c = 0; c < size; ++c) {
-            os << p.ShapeAt(r, c) << ' ';
-        }
-        os << '\n';
-    }
-
+    p.PrintShape(os);
     os << '\n';
 
     for (auto& g : p.blockGraph) {
@@ -184,7 +216,8 @@ struct Solver {
             }
 
             if (possibles[i].size() == 0) {
-                std::cerr << "Impossible to solve" << std::endl;
+                std::cerr << "Impossible to solve. No possible option at " << Coord{i} << std::endl;
+                puzzle.PrintNumbers();
                 exit(1);
                 return false;
             }
@@ -192,9 +225,14 @@ struct Solver {
             if (possibles[i].size() == 1) {
                 int number = *possibles[i].begin();
                 puzzle.numbers[i] = number;
-                std::cout << "Filled(method 1) out " << i << " with " << number << std::endl;
+                std::cout << "Filled(method 1) out " << Coord{i} << " with " << number << std::endl;
+                puzzle.PrintNumbers1D(std::cout, i);
                 changed = true;
             }
+        }
+
+        if (changed) {
+            return true;
         }
 
         // fill those that have only a single place
@@ -222,7 +260,9 @@ struct Solver {
                     }
                     if (possibles[idx].count(num)) {
                         number = num;
-                        std::cout << "Filled(method 2) out " << i << " with " << number << std::endl;
+                        std::cout << "Filled(method 2) out " << Coord{idx} << " with " << number << std::endl;
+
+                        puzzle.PrintNumbers1D(std::cout, idx);
                         changed = true;
                     }
                 }
