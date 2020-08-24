@@ -53,6 +53,23 @@ struct Puzzle {
         }
     }
 
+    bool IsValid() const {
+        for (auto& g : blockGraph) {
+            int32_t occurences = 0;
+            for (int i = 0; i < g.size(); ++i) {
+                int idx = g[i];
+                if (numbers[idx] == 0) {
+                    continue;
+                }
+                if (occurences & (1 << numbers[idx])) {
+                    return false;
+                }
+                occurences |= (1 << numbers[idx]);
+            }
+        }
+        return true;
+    }
+
     void PrintNumbers1D(std::ostream& os = std::cout, int idx = -1) const {
         int row = idx / size;
         int col = idx % size;
@@ -237,7 +254,41 @@ struct Solver {
     Solver(Puzzle& puzzle) : puzzle(puzzle) {}
     Puzzle& puzzle;
 
-    bool SolveNaive() {
+    enum class SolveResult {
+        kImpossible,
+        kSomeSolved,
+        kNoChange
+    };
+
+    bool SolveBacktrackImpl(int nextIdx) {
+        // std::cout << "------------- SolveBacktrack(" << nextIdx << ") -------------" << std::endl;
+        if (nextIdx >= puzzle.numbers.size()) {
+            return true;
+        }
+
+        if (!puzzle.IsValid()) {
+            return false;
+        }
+
+        if (puzzle.numbers[nextIdx] != 0) {
+            return SolveBacktrackImpl(nextIdx + 1);
+        }
+
+        for (int i = 1; i <= puzzle.size; ++i) {
+            puzzle.numbers[nextIdx] = i;
+            if (SolveBacktrackImpl(nextIdx + 1)) {
+                return true;
+            }
+        }
+        puzzle.numbers[nextIdx] = 0;
+        return false;
+    }
+
+    bool SolveBacktrack() {
+        return SolveBacktrackImpl(0);
+    }
+
+    SolveResult SolveNaive() {
         std::cout << "------------- SolveNaive() -------------" << std::endl;
         bool changed = false;
 
@@ -278,8 +329,7 @@ struct Solver {
             if (possibles[i].size() == 0) {
                 std::cerr << "Impossible to solve. No possible option at " << Coord{i} << std::endl;
                 puzzle.PrintNumbers();
-                exit(1);
-                return false;
+                return SolveResult::kImpossible;
             }
 
             if (possibles[i].size() == 1) {
@@ -292,7 +342,7 @@ struct Solver {
         }
 
         if (changed) {
-            return true;
+            return SolveResult::kSomeSolved;
         }
 
         // fill those that have only a single place
@@ -323,23 +373,19 @@ struct Solver {
                         std::cout << "Filled(method 2) out " << Coord{idx} << " with " << number << std::endl;
 
                         puzzle.PrintNumbers1D(std::cout, idx);
-
-                        if (Coord{idx}.row == 4 && Coord{idx}.col == 4) {
-                            std::cout << "This one" << std::endl;
-                            std::cout << "This one" << std::endl;
-                            std::cout << "This one" << std::endl;
-                            std::cout << "This one" << std::endl;
-                        }
-                        return true;
+                        return SolveResult::kSomeSolved;
                     }
                 }
             }
         }
-        return false;
+        return SolveResult::kNoChange;
     }
 
     void Solve() {
-        while (SolveNaive()) {}
+        while (SolveNaive() == SolveResult::kSomeSolved) {}
+        if (SolveBacktrack()) {
+            std::cout << "Solved " << puzzle.IsValid() << std::endl;
+        }
     }
 };
 
